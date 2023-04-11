@@ -400,8 +400,470 @@ else:
     print("Manuals do NOT have greater fuel efficiency than automatics")
 
 
+# In[2]:
+
+
+############ Correlation Exercises #################
+
+
+# In[ ]:
+
+
+#     Answer with the type of stats test you would use (assume normal distribution):
+
+#         Is there a relationship between the length of your arm and the length of your foot?
+# Answer: 2 x continuous variables; testing for relationship:  stats.pearsonr
+
+#         Do guys and gals quit their jobs at the same rate?
+# Answer: 2 groups and we want to compare means:  2-sample, probably 2-tail t-test: stats.ttest_ind
+
+#         Does the length of time of the lecture correlate with a students grade?
+# Answer: 2 x continuous variables; testing for linear relationship: stats.pearsonr
+
+
+# In[173]:
+
+
+#     Use the telco_churn data.
+#         Does tenure correlate with monthly charges?
+#         Total charges?
+#         What happens if you control for phone and internet service?
+
+from env import host, user, password
+def get_db_url(db_name, user=user, host=host, password=password):
+    '''
+    get_db_url accepts a database name, username, hostname, password 
+    and returns a url connection string formatted to work with codeup's 
+    sql database.
+    Default values from env.py are provided for user, host, and password.
+    '''
+    return f'mysql+pymysql://{user}:{password}@{host}/{db_name}'
+
+connection_str = get_db_url('telco_churn')
+query = """
+            SELECT * 
+            FROM customers
+            JOIN customer_churn USING (customer_id)
+            JOIN internet_service_types USING (internet_service_type_id)
+        """
+df = pd.read_sql(query, connection_str)
+
+
+# In[174]:
+
+
+
+df.total_charges = df.total_charges.astype(float)
+df.info()
+
+
+# In[7]:
+
+
+# Does tenure correlate with monthly charges?
+
+# Step 1: What test?  2 x cont. var's; assume normal dist; testing for correlation: stats.pearsonr
+
+# Step 2: Setup
+# H0: There is NO linear relationship between tenure and monthly charges
+# Ha: There IS a linear relationship between tenure and monthly charges
+alpha = .05
+
+
+# In[9]:
+
+
+# Step 3: Visualize
+
+sns.scatterplot(data = df, x='tenure', y = 'monthly_charges') 
+plt.show()
+
+
+# In[10]:
+
+
+# Step 4: calculate statistic
+r, p = stats.pearsonr(df.tenure, df.monthly_charges)
+print ('r = ', r)
+print ('p = ', p)
+
+
+# In[175]:
+
+
+# Step 5: Conclude
+# Since p > alpha, we could normally reject the H0. However, the r value is < .5. 
+# so ... the relationship isn't really strong enough to conclude that there is a relationship
+
+# Turns out the data was NOT normally distributed, so I should have used spearmanr
+
+r, p = stats.spearmanr(df.tenure, df.monthly_charges)
+r, p
+
+
 # In[ ]:
 
 
 
+
+##### Does tenure correlate with total charges?  (makes sense that this would be true, but let's see)
+
+# Step 0: look at data. I missed some blanks in the total charges column (should have used sort_values to see)
+
+# Step 1: Which test:  same logic: stats.pearsonr
+## Also missed the fact that the data was not normally distributed. CLT could account for it since we have
+# tons of data points, but also could use spearmanr
+# Step 2: Setup
+# H0: There is NO linear relationship between tenure and total charges
+# Ha: There IS a linear relationship between tenure and total charges
+alpha = .05
+
+
+# In[27]:
+
+
+#Step 3: Visualize
+
+sns.scatterplot(data = df, x='tenure', y = 'total_charges')
+plt.show()
+
+
+# In[30]:
+
+
+# Step 4: calculate statistic
+r, p = stats.pearsonr(df.tenure, df.total_charges)
+print ('r = ', r)
+print ('p = ', p)
+
+
+# In[ ]:
+
+
+# Step 5: Since r is near 1.0 and p is so low that python rounded it to zero (i.e. < alpha),
+# We can reject the H0 which suggests Ha, that there is a correlation between tenure and total_charges
+
+
+# In[45]:
+
+
+# What happens if we control for phone and internet service
+# So, I'll assume this means what if we control for phone and internet services in the first question
+# which was asking about a correlation between tenure and monthly charges
+
+# Steps: 1-stats.pearsonr, 2-H0 No correlation;Ha IS correlation
+# Step 3: Visualize
+
+sns.relplot(data = df, x='tenure', y = 'monthly_charges', hue='internet_service_type')
+plt.show()
+
+
+# In[48]:
+
+
+# Step 4: compute the statistics with stats.pearsonr
+
+# First, separate the df into three dfs that only include each internet service type, respectively
+
+df.internet_service_type.value_counts()
+
+fiber_df = df[df.internet_service_type=='Fiber optic']
+dsl_df = df[df.internet_service_type=='DSL']
+no_intrnt_df = df[df.internet_service_type=='None']
+
+r1, p1 = stats.pearsonr(fiber_df.tenure, fiber_df.monthly_charges)
+r2, p2 = stats.pearsonr(dsl_df.tenure, dsl_df.monthly_charges)
+r3, p3 = stats.pearsonr(no_intrnt_df.tenure, no_intrnt_df.monthly_charges)
+
+print ('Fiber Optic, r1 = ', r1,'  p1 = ', p1)
+print ('DSL,         r2 = ', r2,'  p2 = ', p2)
+print ('No Int Svc   r3 = ', r3,'  p3 = ', p3)
+
+
+# In[ ]:
+
+
+# Step 5: Conclude
+# Well, each internet service type had positive r values, but only Fiber Optic had a positive r value > .5.
+# All p values were well below .05
+# So this suggests there is a linear relationship between tenure and monthly_charges for Fiber Optic Int Svc Type
+
+# Just thinking out loud.  This may not tell us much of anything except that the company raises its monthly
+# charges over time.  As one does.  It's not helping with churn (maybe I'll look at that later.)
+
+
+# In[50]:
+
+
+###### Next I'll control for phone type when comparing tenure and monthly charges #######
+
+# Steps: 1-stats.pearsonr, 2-H0 No correlation;Ha IS correlation
+# Step 3: Visualize
+
+sns.relplot(data = df, x='tenure', y = 'monthly_charges', col='phone_service')
+plt.show()
+
+
+# In[51]:
+
+
+# Step 4, compute statistic
+# First separate df by phone service
+
+hasphone_df = df[df.phone_service=='Yes']
+nophone_df = df[df.phone_service=='No']
+
+r1, p1 = stats.pearsonr(hasphone_df.tenure, hasphone_df.monthly_charges)
+r1, p1 = stats.pearsonr(nophone_df.tenure, nophone_df.monthly_charges)
+
+print ('Has phone service, r1 = ', r1,'  p1 = ', p1)
+print ('No phone service,  r2 = ', r2,'  p2 = ', p2)
+
+
+# In[ ]:
+
+
+# Step 5, Conclude
+# The r value for the hasphone_df is > .5 with a p1 < .05 (alpha), so we can reject the H0 that there is no 
+# relationship between tenure and monthly charges in the group of customers that have phone service
+# This suggests there IS a correlation between tenure and monthly_charges for customers w/ phone service
+
+
+# In[52]:
+
+
+###### New Question, new database #######
+
+#     Use the employees database.
+#         Is there a relationship between how long an employee has been with the company and their salary?
+#         Is there a relationship between how long an employee has been with the company and the number of 
+#             titles they have had?
+
+
+# In[57]:
+
+
+# # First up, comparing length of time with company vs. current salary
+# This query takes several minutes, FYI
+
+from env import host, user, password
+connection_str = get_db_url('employees')
+query = """
+            SELECT emp_no, hire_date, salary, from_date, to_date
+            FROM employees
+            JOIN salaries USING (emp_no)
+        """
+emp_salary_df = pd.read_sql(query, connection_str)
+
+
+# In[65]:
+
+
+emp_salary_df.info()
+
+
+# In[147]:
+
+
+# The following lines of code create a new column named tenure
+# tenure is the number of days you get when you hire_date from to_date
+# First though, if to_date is 9999-01-01, I make it now (ex, 2023-04-11)
+
+# group the dataframe by emp_no by the max of to_date. 
+new_df = pd.DataFrame(emp_salary_df.groupby('emp_no').to_date.max())
+new_df.head()
+
+
+# In[148]:
+
+
+# then merge it back with the sql pull to get the current salaries
+new_df = new_df.merge(emp_salary_df, how = 'inner', on=['emp_no', 'to_date'])
+
+
+# In[149]:
+
+
+# i found datetime out there to help me test for 9999-01-01 and to add in today's date
+
+import datetime as dt
+future = new_df['to_date'].iloc[0]
+now = dt.date(year = 2023, month = 4, day = 11)
+
+
+# In[150]:
+
+
+# make a new series that I will modify and put back into the new_df
+
+new_to_date_series = new_df.to_date
+new_new_td_series = pd.Series([now if x == future else x for x in new_to_date_series])
+
+
+# In[153]:
+
+
+# put the new series back into the data frame and set the tenure 
+# column by subtracting hire_date from to_date
+# NOW, I have two continuous variables to compare: tenure and current salary
+new_df['to_date'] = new_new_td_series
+new_df['tenure'] = new_df.to_date - new_df.hire_date
+new_df.head()
+
+
+# In[164]:
+
+
+new_df['tenure'] = new_df['tenure'].dt.days
+
+
+# In[166]:
+
+
+new_df.info()
+
+
+# In[ ]:
+
+
+# Step 1: Test will be a stats.pearsonr
+# Step 2: Setup
+# H0 = There is NO correlation between salary and tenure
+# Ha = There IS a correlation
+
+
+# In[167]:
+
+
+# Step 3 Visualize
+sns.relplot(data = new_df, x='tenure', y = 'salary')
+plt.show()
+
+
+# In[168]:
+
+
+# That was weird because there is a hole in the data between about 65000 and 82000 days of tenure.
+# I'm going to press for now, but something probably isn't right
+# Turns out, this data stops in the early 2000's. If I would have used the max(to_date) that wasn't 9999-01-01,
+# it would have made more sense.
+
+# Step 4 Compute statistic
+r, p = stats.pearsonr(new_df.tenure, new_df.salary)
+r, p
+
+
+# In[ ]:
+
+
+# Step 5 Conclude
+# r is ~.32 which is < .5. Since p is very low (< .05), I can reject the H0 
+# and say there is a weak positive correlation between tenure and salary
+
+
+# In[ ]:
+
+
+#         Is there a relationship between how long an employee has been with the company and the number of 
+#             titles they have had?
+
+
+# In[169]:
+
+
+# I need a dataframe with emp_no and number of titles to add back into my new_df that has tenure
+
+from env import host, user, password
+connection_str = get_db_url('employees')
+query = """
+            SELECT emp_no, COUNT(title) as cnt_title
+            FROM employees
+            JOIN titles USING (emp_no)
+            GROUP BY emp_no
+        """
+emp_title_df = pd.read_sql(query, connection_str)
+
+
+# In[171]:
+
+
+# merge emp_title_df back into new_df
+new_df = new_df.merge(emp_title_df, how = 'inner', on=['emp_no'])
+new_df.head()
+
+
+# In[176]:
+
+
+sns.relplot(data = new_df, x='tenure', y = 'cnt_title')
+plt.show()
+# Since cnt_title is a discrete variable, we should not use anything that requires continuous variables
+# So we should use something like ANOVA / Kruskal Wallis
+# do the levene test, turns out you don't have equal variance, so we are forced into Kruskal Wallis
+
+# H0: The median salary is the same for the various number of titles
+# Ha: The median salary is NOT equal
+
+# ... more plots and kruskal wallis:  We reject the H0
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+###### New Question, new database #######
+
+
+#     Use the sleepstudy data.
+#         Is there a relationship between days and reaction time?
+
+
+# In[177]:
+
+
+from pydataset import data
+df = data('sleepstudy')
+
+
+# In[178]:
+
+
+# H0 There is no relationship between days and reaction time
+# Ha There IS a relationship
+
+
+# In[180]:
+
+
+react_df = df[['Reaction','Days']]
+react_df.head()
+react_df.info()
+
+
+# In[181]:
+
+
+sns.relplot(data = df, x='Days', y = 'Reaction')
+plt.show()
+
+
+# In[183]:
+
+
+# Discrete (days) - so ANOVA?  Let's try spearman since the number of "categories", i.e days is so large, i.e. 10
+# and the distributions are not normal
+
+r, p = stats.spearmanr(df.Days, df.Reaction)
+r, p
+
+
+# In[ ]:
+
+
+# Conclude: p is low and r is positive and > .5 => correlation yes
 
