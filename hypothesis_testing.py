@@ -73,7 +73,7 @@
 # -- We conclude sales have not increased BUT actually they have increased
 
 
-# In[1]:
+# In[2]:
 
 
 import numpy as np
@@ -421,7 +421,7 @@ else:
 # Answer: 2 x continuous variables; testing for linear relationship: stats.pearsonr
 
 
-# In[173]:
+# In[18]:
 
 
 #     Use the telco_churn data.
@@ -866,4 +866,322 @@ r, p
 
 
 # Conclude: p is low and r is positive and > .5 => correlation yes
+
+
+# In[ ]:
+
+
+# Answer with the type of stats test you would use (assume normal distribution):
+
+#     Do students get better test grades if they have a rubber duck on their desk?
+# Answer: t-test, 2-sample, 1 tail
+
+#     Does smoking affect when or not someone has lung cancer?
+# Answer: chi_square because we're comparing two categorical variables
+
+#     Is gender independent of a person’s blood type?
+# Answer: chi_square
+
+#     A farming company wants to know if a new fertilizer has improved crop yield or not
+# Answer: t-test, 2-sample, 1 tail
+
+#     Does the length of time of the lecture correlate with a students grade?
+# Answer: pearsonr or spearmanr because we're comparing 2 continuous variables
+
+#     Do people with dogs live in apartments more than people with cats?
+# Answer: chi_square because we're comparing two categorical variables
+
+
+# In[25]:
+
+
+# Use the following contingency table to help answer the question of whether using a macbook and being a 
+# codeup student are independent of each other.
+
+# We can reject the H0 which suggests the Ha, i.e. that there is a relationship between using a macbook and being
+# a Codeup student
+
+# Step 1: Form Hypothesis
+# H0 = There is no association between being a Codeup student and using a Macbook
+# Ha = There IS an association
+alpha = .05
+
+observed = [[49, 20], [1, 30]]
+observed = pd.DataFrame(observed)
+observed
+
+
+# In[26]:
+
+
+# Step 3: compute statistic with stats.chi2_contingency
+
+chi2, p, degf, expected = stats.chi2_contingency(observed)
+
+# print 'Observed Values' followed by a new line
+print('Observed Values\n')
+
+# print the values from the 'observed' dataframe
+print(observed.values)
+
+# print --- and then a new line, 'Expected Values', followed by another new line
+print('---\nExpected Values\n')
+
+# print the expected values array
+print(expected.astype(int))
+
+# print a new line
+print('---\n')
+
+# print the chi2 value, formatted to a float with 4 digits. 
+print(f'chi^2 = {chi2:.4f}') 
+
+# print the p-value, formatted to a float with 4 digits. 
+print(f'p     = {p:.4f}')
+
+
+# In[ ]:
+
+
+# Conclude
+# since p < alpha, we can reject the H0
+
+
+# In[ ]:
+
+
+###############################
+# Choose another 2 categorical variables from the mpg dataset and perform a chi2
+
+# contingency table test with them. Be sure to state your null and alternative hypotheses.
+
+
+# In[2]:
+
+
+from pydataset import data
+df = data('mpg')
+df.head()
+
+
+# In[12]:
+
+
+# I will compare the cyl and class categorical variables
+
+# Renamed the 'class' column to a non-reserved string
+# df = df.rename(columns={'class': 'cls'})
+
+# Step 1: Form hypothesis
+# H0 = There is no association between the cyl and cls categories
+# Ha = There IS an association btwn cyl, cls categories
+alpha = .05
+df.info()
+
+
+# In[15]:
+
+
+# Step 2: make contingency table
+observed = pd.crosstab(df.cls, df.cyl)
+observed
+
+
+# In[17]:
+
+
+# Step 3: compute statistic with stats.chi2_contingency
+
+chi2, p, degf, expected = stats.chi2_contingency(observed)
+
+# print 'Observed Values' followed by a new line
+print('Observed Values\n')
+
+# print the values from the 'observed' dataframe
+print(observed.values)
+
+# print --- and then a new line, 'Expected Values', followed by another new line
+print('---\nExpected Values\n')
+
+# print the expected values array
+print(expected.astype(int))
+
+# print a new line
+print('---\n')
+
+# print the chi2 value, formatted to a float with 4 digits. 
+print(f'chi^2 = {chi2:.4f}') 
+
+# print the p-value, formatted to a float with 4 digits. 
+print(f'p     = {p:.4f}')
+
+
+# In[ ]:
+
+
+# Since p is < alpha, we can reject the H0
+
+
+# In[3]:
+
+
+# Use the data from the employees database to answer these questions:
+
+#     Is an employee's gender independent of whether an employee works in sales or marketing? 
+#       (only look at current employees)
+
+
+from env import host, user, password
+def get_db_url(db_name, user=user, host=host, password=password):
+    '''
+    get_db_url accepts a database name, username, hostname, password 
+    and returns a url connection string formatted to work with codeup's 
+    sql database.
+    Default values from env.py are provided for user, host, and password.
+    '''
+    return f'mysql+pymysql://{user}:{password}@{host}/{db_name}'
+
+connection_str = get_db_url('employees')
+query = """
+            SELECT de.emp_no, e.gender, de.dept_no, d.dept_name
+            FROM dept_emp as de
+            JOIN departments as d USING (dept_no)
+            JOIN employees as e USING (emp_no)
+            WHERE de.to_date > NOW()
+            ORDER BY de.emp_no
+        """
+df = pd.read_sql(query, connection_str)
+
+
+# In[7]:
+
+
+# Step 1: Form hypothesis
+# H0 = There is NO association between gender and whether or not they work in sales or marketing
+# Ha = There IS an association
+
+# Step 2: Make contingency table
+# First make a new column and new df for sales or marketing only
+
+new_df = df[(df.dept_name == 'Sales') | (df.dept_name == 'Marketing')]
+
+
+# In[10]:
+
+
+observed = pd.crosstab(new_df.gender, new_df.dept_name)
+observed
+
+
+# In[11]:
+
+
+# Step 3: compute statistic with stats.chi2_contingency
+
+chi2, p, degf, expected = stats.chi2_contingency(observed)
+
+# print 'Observed Values' followed by a new line
+print('Observed Values\n')
+
+# print the values from the 'observed' dataframe
+print(observed.values)
+
+# print --- and then a new line, 'Expected Values', followed by another new line
+print('---\nExpected Values\n')
+
+# print the expected values array
+print(expected.astype(int))
+
+# print a new line
+print('---\n')
+
+# print the chi2 value, formatted to a float with 4 digits. 
+print(f'chi^2 = {chi2:.4f}') 
+
+# print the p-value, formatted to a float with 4 digits. 
+print(f'p     = {p:.4f}')
+
+
+# In[ ]:
+
+
+# Conclude:
+# Since p > alpha of .05, we cannot reject the H0 
+# (which suggests there is not an association btwn gender and whether an employee works in Sales or Marketing)
+
+
+# In[12]:
+
+
+###### #     Is an employee's gender independent of whether or not they are or have been a manager?
+
+connection_str = get_db_url('employees')
+query = '''
+        SELECT emp_no, gender, is_manager
+        FROM employees
+        LEFT JOIN (
+            SELECT emp_no,
+                IF (True, True, False) as is_manager
+            FROM dept_manager
+            ) as dm USING (emp_no)
+        '''
+mngr_df = pd.read_sql(query, connection_str)
+
+
+# In[62]:
+
+
+
+mngr_df.is_manager = mngr_df.is_manager.fillna(False)
+mngr_df.is_manager = mngr_df.is_manager.astype(bool)
+mngr_df.info()
+
+
+# In[63]:
+
+
+# Step 1, Form hypothesis
+# H0 = There is no association between gender and is_manager
+# Ha = There IS an association
+
+# Step 2 make contingency table
+
+observed = pd.crosstab(mngr_df.gender, mngr_df.is_manager)
+observed
+
+
+# In[64]:
+
+
+# Step 3: compute statistic with stats.chi2_contingency
+
+chi2, p, degf, expected = stats.chi2_contingency(observed)
+
+# print 'Observed Values' followed by a new line
+print('Observed Values\n')
+
+# print the values from the 'observed' dataframe
+print(observed.values)
+
+# print --- and then a new line, 'Expected Values', followed by another new line
+print('---\nExpected Values\n')
+
+# print the expected values array
+print(expected.astype(int))
+
+# print a new line
+print('---\n')
+
+# print the chi2 value, formatted to a float with 4 digits. 
+print(f'chi^2 = {chi2:.4f}') 
+
+# print the p-value, formatted to a float with 4 digits. 
+print(f'p     = {p:.4f}')
+
+
+# In[ ]:
+
+
+# Conclude
+# Since p > .05, we fail to reject the H0
 
